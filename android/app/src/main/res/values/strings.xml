@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sleep Tight</string>
+    <string name="title_activity_main">Sleep Tight</string>
+    <string name="package_name">com.genaiapps.sleeptight</string>
+    <string name="custom_url_scheme">com.genaiapps.sleeptight</string>
+</resources>

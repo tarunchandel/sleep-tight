@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description"
+    content="Sleep Tight - Protect the sleeping baby from buzzing flies! A fun, addictive mobile game." />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Sleep Tight</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0d0d1a;
+      font-family: 'Nunito', sans-serif;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Magical Loading Screen */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0d0d1a 0%, #1a1a3e 50%, #16213e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+
+    #loading-screen::before {
+      content: '';
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      background-image: radial-gradient(white 1px, transparent 1px);
+      background-size: 50px 50px;
+      opacity: 0.1;
+      animation: drift 60s linear infinite;
+    }
+
+    @keyframes drift {
+      from {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+
+      to {
+        transform: translate(-25%, -25%) rotate(20deg);
+      }
+    }
+
+    #loading-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(1.1);
+    }
+
+    .logo-container {
+      position: relative;
+      margin-bottom: 2rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .loading-title {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: #fffaf0;
+      text-shadow: 0 0 30px rgba(232, 213, 183, 0.6), 0 4px 10px rgba(0, 0, 0, 0.3);
+      letter-spacing: -1px;
+      margin: 0;
+    }
+
+    .loading-icon {
+      font-size: 4rem;
+      display: block;
+      text-align: center;
+      filter: drop-shadow(0 0 20px rgba(247, 183, 49, 0.6));
+    }
+
+    .loading-subtitle {
+      font-size: 1.1rem;
+      color: rgba(232, 213, 183, 0.8);
+      margin-top: 0.5rem;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .loading-bar-container {
+      width: 220px;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .loading-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #f7b731, #fc5c65);
+      position: relative;
+      box-shadow: 0 0 10px rgba(247, 183, 49, 0.5);
+      transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .loading-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      transform: translateX(-100%);
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      100% {
+        transform: translateX(100%);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loading-screen">
+    <div class="logo-container">
+      <div class="loading-icon">🌙</div>
+      <div class="loading-title">Sleep Tight</div>
+      <div class="loading-subtitle">Shhh... the baby is sleeping</div>
+    </div>
+    <div class="loading-bar-container">
+      <div class="loading-bar" id="loading-bar"></div>
+    </div>
+  </div>
+  <canvas id="game-canvas"></canvas>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

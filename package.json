@@ -1,0 +1,22 @@
+{
+  "name": "sleep-tight",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Protect the sleeping baby from buzzing flies!",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/haptics": "^6.0.3",
+    "@capacitor/status-bar": "^6.0.3"
+  }
+}

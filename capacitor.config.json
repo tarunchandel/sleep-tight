@@ -1,0 +1,15 @@
+{
+    "appId": "com.genaiapps.sleeptight",
+    "appName": "Sleep Tight",
+    "webDir": "dist",
+    "server": {
+        "androidScheme": "https"
+    },
+    "plugins": {
+        "StatusBar": {
+            "backgroundColor": "#0d0d1a",
+            "style": "DARK",
+            "overlaysWebView": true
+        }
+    }
+}
