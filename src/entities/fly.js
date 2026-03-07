@@ -1,5 +1,6 @@
 /**
- * Fly Entity - a devious, hard-to-catch fly with erratic movement.
+ * Fly Entity - richly rendered devious fly with iridescent wings,
+ * detailed body segments, and expressive cartoon eyes.
  * 85%+ dodge chance on tap, fast and unpredictable.
  * Buzzing near baby drains sleep meter.
  */
@@ -10,7 +11,7 @@ export class Fly {
     constructor(spawnEdge = null) {
         this._spawn(spawnEdge);
 
-        // Movement - faster base speed
+        // Movement
         this.vx = 0;
         this.vy = 0;
         this.speed = 100;
@@ -30,30 +31,33 @@ export class Fly {
         this.shooVy = 0;
         this.deadTimer = 0;
 
-        // Dodge mechanics - harder to kill
+        // Dodge mechanics
         this.dodgeCooldown = 0;
         this.dodgeSpeed = 500;
-        this.reactionTime = 0.05; // very fast reaction
+        this.reactionTime = 0.05;
 
         // Visual
         this.wingPhase = Math.random() * Math.PI * 2;
-        this.size = 10; // Slightly bigger for visibility
+        this.size = 11;
         this.rotation = 0;
         this.squashScale = 1;
         this.alpha = 1;
         this.id = Date.now() + Math.random();
 
-        // Erratic movement modifiers
+        // Erratic movement
         this.erraticPhase = Math.random() * Math.PI * 2;
         this.zigzagAmplitude = randFloat(30, 80);
         this.zigzagFreq = randFloat(3, 7);
 
         // Difficulty
         this.speedMultiplier = 1;
-        this.dodgeChance = 0.85; // 85% base dodge chance!
+        this.dodgeChance = 0.85;
 
         // Buzzing intensity for audio
         this.buzzIntensity = 1;
+
+        // Leg wiggle animation
+        this.legPhase = Math.random() * Math.PI * 2;
     }
 
     _spawn(edge) {
@@ -79,14 +83,12 @@ export class Fly {
     }
 
     update(dt, babyInfo, gameTime) {
-        this.wingPhase += dt * 45; // Faster wing flutter
+        this.wingPhase += dt * 45;
         this.erraticPhase += dt * this.zigzagFreq;
+        this.legPhase += dt * 8;
         this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
 
-        // Speed increases over time
         this.speedMultiplier = 1 + Math.min(gameTime / 90, 3.0);
-
-        // Dodge chance increases slightly over time too
         this.dodgeChance = Math.min(0.92, 0.85 + gameTime / 600);
 
         switch (this.state) {
@@ -110,13 +112,11 @@ export class Fly {
                 break;
         }
 
-        // Rotation follows movement
         if (this.state !== 'dead' && this.state !== 'landing') {
             const targetRot = Math.atan2(this.vy, this.vx);
             this.rotation = lerp(this.rotation, targetRot, dt * 5);
         }
 
-        // Clamp to screen bounds
         if (this.state !== 'shooed' && this.state !== 'dead') {
             this.x = clamp(this.x, -10, GAME_WIDTH + 10);
             this.y = clamp(this.y, -10, GAME_HEIGHT * 0.8);
@@ -131,7 +131,6 @@ export class Fly {
             this.wanderChangeDuration = randFloat(0.3, 1.0);
 
             if (Math.random() < this.babyBias) {
-                // 50% chance to circle before approaching
                 if (Math.random() < 0.4) {
                     this.state = 'circling';
                     this.approachTimer = 0;
@@ -145,7 +144,6 @@ export class Fly {
             this.wanderAngle += randFloat(-Math.PI / 2, Math.PI / 2);
         }
 
-        // Erratic movement - zigzag pattern
         this.wanderAngle += (Math.random() - 0.5) * dt * 5;
         const erratic = Math.sin(this.erraticPhase) * this.zigzagAmplitude * dt;
 
@@ -159,7 +157,6 @@ export class Fly {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
-        // Bounce off edges
         if (this.x < 10 || this.x > GAME_WIDTH - 10) {
             this.vx *= -1;
             this.wanderAngle = Math.atan2(this.vy, this.vx);
@@ -170,16 +167,14 @@ export class Fly {
         }
     }
 
-    /** New behavior: circle around baby before approaching */
     _updateCircling(dt, babyInfo) {
         this.approachTimer += dt;
 
         const angle = angleBetween(babyInfo.x, babyInfo.y, this.x, this.y);
-        const circleAngle = angle + Math.PI / 2; // perpendicular = circle
+        const circleAngle = angle + Math.PI / 2;
         const d = dist(this.x, this.y, babyInfo.x, babyInfo.y);
         const targetDist = 80 + Math.sin(this.approachTimer * 2) * 20;
 
-        // Move in a circle around baby
         const radialForce = (d - targetDist) * 2;
         const spd = this.speed * this.speedMultiplier * 0.8;
 
@@ -189,7 +184,6 @@ export class Fly {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
-        // After circling, dive in
         if (this.approachTimer > 2 + Math.random() * 2) {
             this.state = 'approaching';
             this.approachTimer = 0;
@@ -200,11 +194,9 @@ export class Fly {
         this.approachTimer += dt;
 
         const angle = angleBetween(this.x, this.y, babyInfo.x, babyInfo.y);
-
-        // Very erratic approach - hard to predict
         const jitter = Math.sin(this.approachTimer * 8) * 0.8;
         const zigzag = Math.cos(this.approachTimer * 5) * 0.5;
-        const spd = this.speed * this.speedMultiplier * 1.2; // Faster approach
+        const spd = this.speed * this.speedMultiplier * 1.2;
 
         this.vx = lerp(this.vx, Math.cos(angle + jitter + zigzag) * spd, dt * 2.5);
         this.vy = lerp(this.vy, Math.sin(angle + jitter + zigzag) * spd, dt * 2.5);
@@ -212,7 +204,6 @@ export class Fly {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
-        // Land when close
         const d = dist(this.x, this.y, babyInfo.x, babyInfo.y);
         if (d < 30) {
             this.state = 'landing';
@@ -220,7 +211,6 @@ export class Fly {
             this.landingTarget = { x: babyInfo.x + randFloat(-12, 12), y: babyInfo.y + randFloat(-8, 8) };
         }
 
-        // Give up and wander or circle again
         if (this.approachTimer > 3) {
             this.state = Math.random() < 0.3 ? 'circling' : 'wandering';
             this.wanderAngle = Math.random() * Math.PI * 2;
@@ -277,14 +267,12 @@ export class Fly {
         }
     }
 
-    /** Dodge a tap - very fast evasive maneuver */
     dodge(tx, ty) {
         if (this.state === 'dead' || this.dodgeCooldown > 0) return;
         this.state = 'shooed';
         this.shooedTimer = 0;
         this.dodgeCooldown = 0.3;
 
-        // Dodge in a random direction away from tap, NOT just straight away
         const baseAngle = Math.atan2(this.y - ty, this.x - tx);
         const randomOffset = randFloat(-Math.PI / 3, Math.PI / 3);
         const force = this.dodgeSpeed * this.speedMultiplier;
@@ -322,141 +310,226 @@ export class Fly {
             ctx.scale(1, this.squashScale);
         }
 
-        // Shadow on the crib
+        // Buzzing motion blur effect when moving fast
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > 100 && this.state !== 'dead') {
+            ctx.globalAlpha = this.alpha * 0.15;
+            ctx.save();
+            ctx.translate(-this.vx * 0.01, -this.vy * 0.01);
+            this._drawFlyBody(ctx);
+            ctx.restore();
+            ctx.globalAlpha = this.alpha;
+        }
+
+        this._drawFlyBody(ctx);
+
+        ctx.restore();
+    }
+
+    _drawFlyBody(ctx) {
+        const s = this.size;
+
+        // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.beginPath();
-        ctx.ellipse(2, 14, 7, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(2, 15, 8, 3.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Wings - iridescent
+        // ═══ WINGS ═══
         const wingAngle = Math.sin(this.wingPhase) * 0.8;
-        const wingSize = this.state === 'landing' ? 6 : 9;
+        const wingSize = this.state === 'landing' ? 7 : 10;
 
-        // Wing iridescence
-        const wingGrad = ctx.createRadialGradient(0, -4, 0, 0, -4, wingSize);
-        wingGrad.addColorStop(0, 'rgba(180, 210, 255, 0.5)');
-        wingGrad.addColorStop(0.5, 'rgba(200, 230, 255, 0.35)');
-        wingGrad.addColorStop(1, 'rgba(160, 190, 240, 0.2)');
-        ctx.fillStyle = wingGrad;
+        // Wing iridescence with multi-color gradient
+        [-1, 1].forEach(side => {
+            ctx.save();
+            ctx.rotate(side * (-wingAngle - 0.3));
 
-        ctx.strokeStyle = 'rgba(180, 200, 240, 0.4)';
+            // Wing glow
+            const wingGlow = ctx.createRadialGradient(side * 4, -5, 0, side * 4, -5, wingSize * 1.2);
+            wingGlow.addColorStop(0, 'rgba(200, 230, 255, 0.45)');
+            wingGlow.addColorStop(0.3, 'rgba(180, 220, 255, 0.35)');
+            wingGlow.addColorStop(0.6, 'rgba(200, 210, 240, 0.2)');
+            wingGlow.addColorStop(1, 'rgba(160, 190, 220, 0.05)');
+            ctx.fillStyle = wingGlow;
+            ctx.beginPath();
+            ctx.ellipse(side * 4, -5, wingSize, wingSize * 0.55, side * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Wing vein detail
+            ctx.strokeStyle = 'rgba(160, 190, 230, 0.25)';
+            ctx.lineWidth = 0.4;
+            ctx.beginPath();
+            ctx.moveTo(side * 1, -5);
+            ctx.lineTo(side * (wingSize - 2), -5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(side * 2, -4);
+            ctx.lineTo(side * (wingSize - 3), -7);
+            ctx.stroke();
+
+            // Wing rim
+            ctx.strokeStyle = 'rgba(180, 210, 255, 0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.ellipse(side * 4, -5, wingSize, wingSize * 0.55, side * 0.5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        });
+
+        // ═══ BODY SEGMENTS ═══
+        // Abdomen (rear) with stripy shading
+        const abdGrad = ctx.createLinearGradient(0, 2, 0, s * 0.9 + 5);
+        abdGrad.addColorStop(0, '#3a3a3a');
+        abdGrad.addColorStop(0.3, '#2a2a2a');
+        abdGrad.addColorStop(0.5, '#353535');
+        abdGrad.addColorStop(0.7, '#252525');
+        abdGrad.addColorStop(1, '#1a1a1a');
+        ctx.fillStyle = abdGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 5, s * 0.45, s * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Abdomen segment lines
+        ctx.strokeStyle = 'rgba(80, 80, 80, 0.3)';
         ctx.lineWidth = 0.5;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(0, 3 + i * 3, s * 0.4 - i * 1, -0.3, Math.PI + 0.3, true);
+            ctx.stroke();
+        }
 
-        // Left wing
-        ctx.save();
-        ctx.rotate(-wingAngle - 0.3);
+        // Abdomen highlight
+        const abdHighlight = ctx.createRadialGradient(-s * 0.1, 3, 0, 0, 5, s * 0.4);
+        abdHighlight.addColorStop(0, 'rgba(100, 100, 100, 0.2)');
+        abdHighlight.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = abdHighlight;
         ctx.beginPath();
-        ctx.ellipse(-4, -5, wingSize, wingSize * 0.5, -0.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-
-        // Right wing
-        ctx.save();
-        ctx.rotate(wingAngle + 0.3);
-        ctx.beginPath();
-        ctx.ellipse(4, -5, wingSize, wingSize * 0.5, 0.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-
-        // Body - dark with slight sheen
-        const bodyGrad = ctx.createLinearGradient(0, -this.size * 0.8, 0, this.size * 0.8);
-        bodyGrad.addColorStop(0, '#3a3a3a');
-        bodyGrad.addColorStop(0.5, '#2a2a2a');
-        bodyGrad.addColorStop(1, '#1a1a1a');
-        ctx.fillStyle = bodyGrad;
-
-        // Thorax
-        ctx.beginPath();
-        ctx.ellipse(0, -2, this.size * 0.5, this.size * 0.6, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 5, s * 0.45, s * 0.55, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Abdomen
+        // Thorax (middle) with sheen
+        const thoraxGrad = ctx.createRadialGradient(-s * 0.1, -3, 1, 0, -2, s * 0.55);
+        thoraxGrad.addColorStop(0, '#4a4a4a');
+        thoraxGrad.addColorStop(0.5, '#2e2e2e');
+        thoraxGrad.addColorStop(1, '#1a1a1a');
+        ctx.fillStyle = thoraxGrad;
         ctx.beginPath();
-        ctx.ellipse(0, 5, this.size * 0.4, this.size * 0.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -2, s * 0.5, s * 0.6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Head
+        // ═══ HEAD ═══
+        const headGrad = ctx.createRadialGradient(-s * 0.1, -s * 0.85, 1, 0, -s * 0.8, s * 0.5);
+        headGrad.addColorStop(0, '#454545');
+        headGrad.addColorStop(1, '#1a1a1a');
+        ctx.fillStyle = headGrad;
         ctx.beginPath();
-        ctx.arc(0, -this.size * 0.8, this.size * 0.45, 0, Math.PI * 2);
+        ctx.arc(0, -s * 0.8, s * 0.48, 0, Math.PI * 2);
         ctx.fill();
 
-        // Big cartoon eyes - evil but cute
-        const eyeY = -this.size * 0.9;
-        const eyeX = this.size * 0.22;
-        const eyeSize = this.size * 0.35;
+        // ═══ EYES ═══
+        const eyeY = -s * 0.95;
+        const eyeX = s * 0.24;
+        const eyeSize = s * 0.38;
 
-        // Eye whites
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(-eyeX, eyeY, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
+        [-1, 1].forEach(side => {
+            const ex = side * eyeX;
 
-        // Red-ish iris (evil fly!)
-        ctx.fillStyle = '#880000';
-        const pupilOffset = Math.sin(this.wingPhase * 0.3) * 0.8;
-        ctx.beginPath();
-        ctx.arc(-eyeX + pupilOffset, eyeY, eyeSize * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeX + pupilOffset, eyeY, eyeSize * 0.5, 0, Math.PI * 2);
-        ctx.fill();
+            // Eye socket shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.beginPath();
+            ctx.arc(ex, eyeY + 1, eyeSize + 1, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Pupils
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(-eyeX + pupilOffset, eyeY, eyeSize * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeX + pupilOffset, eyeY, eyeSize * 0.25, 0, Math.PI * 2);
-        ctx.fill();
+            // Eye whites with gradient
+            const eyeGrad = ctx.createRadialGradient(ex - 1, eyeY - 1, 0, ex, eyeY, eyeSize);
+            eyeGrad.addColorStop(0, '#ffffff');
+            eyeGrad.addColorStop(0.8, '#f5f5f5');
+            eyeGrad.addColorStop(1, '#dddddd');
+            ctx.fillStyle = eyeGrad;
+            ctx.beginPath();
+            ctx.arc(ex, eyeY, eyeSize, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Eye highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.beginPath();
-        ctx.arc(-eyeX - 1, eyeY - 1, eyeSize * 0.15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeX - 1, eyeY - 1, eyeSize * 0.15, 0, Math.PI * 2);
-        ctx.fill();
+            // Red-ish iris (evil fly!)
+            const pupilOffset = Math.sin(this.wingPhase * 0.3) * 0.8;
+            const irisGrad = ctx.createRadialGradient(ex + pupilOffset, eyeY, 0, ex + pupilOffset, eyeY, eyeSize * 0.55);
+            irisGrad.addColorStop(0, '#cc2200');
+            irisGrad.addColorStop(0.6, '#880000');
+            irisGrad.addColorStop(1, '#550000');
+            ctx.fillStyle = irisGrad;
+            ctx.beginPath();
+            ctx.arc(ex + pupilOffset, eyeY, eyeSize * 0.55, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Mischievous smile
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            // Pupil
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(ex + pupilOffset, eyeY, eyeSize * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye highlights
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.beginPath();
+            ctx.arc(ex - 1, eyeY - 1.5, eyeSize * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Secondary highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.beginPath();
+            ctx.arc(ex + 1.5, eyeY + 1, eyeSize * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Evil eyebrow furrowing
+        ctx.strokeStyle = 'rgba(100,100,100,0.6)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(0, -this.size * 0.55, this.size * 0.18, 0.2, Math.PI - 0.2);
+        ctx.moveTo(-eyeX - eyeSize * 0.5, eyeY - eyeSize - 1);
+        ctx.lineTo(-eyeX + eyeSize * 0.3, eyeY - eyeSize + 1);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(eyeX + eyeSize * 0.5, eyeY - eyeSize - 1);
+        ctx.lineTo(eyeX - eyeSize * 0.3, eyeY - eyeSize + 1);
         ctx.stroke();
 
-        // Antennae
-        ctx.strokeStyle = '#2a2a2a';
+        // Mischievous smile
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
         ctx.lineWidth = 1;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(-3, -this.size * 1.1);
-        ctx.quadraticCurveTo(-6, -this.size * 1.5, -8, -this.size * 1.4);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(3, -this.size * 1.1);
-        ctx.quadraticCurveTo(6, -this.size * 1.5, 8, -this.size * 1.4);
+        ctx.arc(0, -s * 0.55, s * 0.2, 0.2, Math.PI - 0.2);
         ctx.stroke();
 
-        // Legs
+        // ═══ ANTENNAE ═══
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = 1.2;
+        ctx.lineCap = 'round';
+        const antennaWiggle = Math.sin(this.wingPhase * 0.5) * 2;
+        [-1, 1].forEach(side => {
+            ctx.beginPath();
+            ctx.moveTo(side * 3, -s * 1.15);
+            ctx.quadraticCurveTo(side * (6 + antennaWiggle), -s * 1.6, side * (8 + antennaWiggle * 0.5), -s * 1.45);
+            ctx.stroke();
+            // Antenna tip ball
+            ctx.fillStyle = '#3a3a3a';
+            ctx.beginPath();
+            ctx.arc(side * (8 + antennaWiggle * 0.5), -s * 1.45, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // ═══ LEGS ═══
         if (this.state === 'landing' || this.state === 'circling') {
             ctx.strokeStyle = '#1a1a1a';
             ctx.lineWidth = 1;
             ctx.lineCap = 'round';
+            const legWiggle = Math.sin(this.legPhase) * 1;
             for (let i = -1; i <= 1; i++) {
                 ctx.beginPath();
                 ctx.moveTo(i * 3, 3);
-                ctx.quadraticCurveTo(i * 7, 8, i * 5, 10);
+                ctx.quadraticCurveTo(i * 7 + legWiggle, 8, i * 5, 11);
                 ctx.stroke();
             }
         }
-
-        ctx.restore();
     }
 }

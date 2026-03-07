@@ -1,5 +1,5 @@
 /**
- * HUD - in-game heads-up display with sleep meter, score, time, combo.
+ * HUD - in-game heads-up display with sleep meter, score, time, combo, coins.
  * Bigger fonts, vibrant colors, more pop!
  */
 import { GAME_WIDTH, GAME_HEIGHT } from '../engine/renderer.js';
@@ -8,6 +8,7 @@ import { clamp, formatTime } from '../engine/utils.js';
 export class HUD {
     constructor() {
         this.sleepMeter = 100;
+        this.maxSleepMeter = 100;
         this.displayMeter = 100;
         this.score = 0;
         this.displayScore = 0;
@@ -35,10 +36,18 @@ export class HUD {
 
         // Animated score bounce
         this.scoreScale = 1;
+
+        // Coins
+        this.coinsEarned = 0;
+        this.displayCoins = 0;
+        this.coinScale = 1;
+        this.coinFlash = 0;
+        this.activeGoodies = []; // List of equipped goody names for display
     }
 
-    update(dt, sleepMeter, score, timeSurvived, fliesNeutralized) {
+    update(dt, sleepMeter, score, timeSurvived, fliesNeutralized, maxSleepMeter = 100) {
         this.sleepMeter = sleepMeter;
+        this.maxSleepMeter = maxSleepMeter;
         this.timeSurvived = timeSurvived;
         this.fliesNeutralized = fliesNeutralized;
 
@@ -128,11 +137,25 @@ export class HUD {
         this.flashTimer = 0.3;
     }
 
+    setCoins(coins) {
+        if (coins > this.coinsEarned) {
+            this.coinScale = 1.3;
+            this.coinFlash = 1;
+        }
+        this.coinsEarned = coins;
+    }
+
+    setActiveGoodies(goodies) {
+        this.activeGoodies = goodies || [];
+    }
+
     draw(ctx, renderer) {
         this._drawSleepMeter(ctx);
         this._drawScore(ctx);
         this._drawTime(ctx);
         this._drawFliesCount(ctx);
+        this._drawCoins(ctx);
+        this._drawActiveGoodies(ctx);
         this._drawCombo(ctx);
         this._drawFunMessage(ctx);
         this._drawPopups(ctx);
@@ -147,7 +170,7 @@ export class HUD {
         const w = 170;
         const h = 18;
         const r = 9;
-        const meter = clamp(this.displayMeter, 0, 100);
+        const meter = clamp(this.displayMeter, 0, this.maxSleepMeter);
 
         // Label with emoji and bold font
         ctx.font = '800 13px Nunito';
@@ -168,7 +191,7 @@ export class HUD {
         ctx.shadowBlur = 0;
 
         // Fill bar with gradient
-        const fillW = Math.max(0, (w - 4) * (meter / 100));
+        const fillW = Math.max(0, (w - 4) * (meter / this.maxSleepMeter));
         let primaryColor, secondaryColor, glowColor;
 
         if (meter > 60) {
@@ -238,16 +261,16 @@ export class HUD {
 
     _drawScore(ctx) {
         ctx.save();
-        ctx.translate(GAME_WIDTH - 20, 25);
+        ctx.translate(GAME_WIDTH / 2, 18);
         ctx.scale(this.scoreScale, this.scoreScale);
 
-        // Score number - BIG and golden
-        ctx.font = '900 42px Nunito';
-        ctx.textAlign = 'right';
+        // Score number - centered golden
+        ctx.font = '900 32px Nunito';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
         // Golden gradient
-        const grad = ctx.createLinearGradient(-80, 0, 0, 0);
+        const grad = ctx.createLinearGradient(-60, 0, 60, 0);
         grad.addColorStop(0, '#FFD700');
         grad.addColorStop(0.5, '#FFF176');
         grad.addColorStop(1, '#FFB300');
@@ -256,28 +279,23 @@ export class HUD {
         // Glow
         ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
         ctx.shadowBlur = 15;
-        ctx.shadowOffsetY = 3;
+        ctx.shadowOffsetY = 2;
 
-        ctx.fillText(Math.round(this.displayScore).toLocaleString(), 0, -5);
-
-        // Label
+        ctx.fillText(Math.round(this.displayScore).toLocaleString(), 0, -2);
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
-        ctx.font = '900 13px Nunito';
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText('SCORE', 0, 38);
 
         ctx.restore();
     }
 
     _drawTime(ctx) {
-        ctx.font = '700 14px Nunito';
+        ctx.font = '700 13px Nunito';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
         ctx.shadowBlur = 4;
-        ctx.fillText(`⏱ ${formatTime(this.timeSurvived)}`, GAME_WIDTH - 20, 60);
+        ctx.fillText(`⏱ ${formatTime(this.timeSurvived)}`, GAME_WIDTH - 15, 15);
         ctx.shadowBlur = 0;
     }
 
@@ -290,6 +308,56 @@ export class HUD {
         ctx.shadowBlur = 4;
         ctx.fillText(`🪰 ${this.fliesNeutralized}`, 15, 55);
         ctx.shadowBlur = 0;
+    }
+
+    _drawCoins(ctx) {
+        // Animate coins display
+        this.displayCoins += (this.coinsEarned - this.displayCoins) * 0.1;
+        this.coinScale = Math.max(1, this.coinScale - 0.03);
+        this.coinFlash = Math.max(0, this.coinFlash - 0.02);
+
+        ctx.save();
+        const cx = GAME_WIDTH - 15;
+        const cy = 38;
+        ctx.translate(cx, cy);
+        ctx.scale(this.coinScale, this.coinScale);
+
+        // Coin glow flash
+        if (this.coinFlash > 0) {
+            ctx.shadowColor = `rgba(255, 215, 0, ${this.coinFlash * 0.6})`;
+            ctx.shadowBlur = 12;
+        }
+
+        ctx.font = '700 13px Nunito';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(`🪙 ${Math.round(this.displayCoins)}`, 0, 0);
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+    }
+
+    _drawActiveGoodies(ctx) {
+        if (!this.activeGoodies || this.activeGoodies.length === 0) return;
+
+        // Draw small icons of active goodies near top-right
+        const startX = GAME_WIDTH - 15;
+        const y = 58;
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.globalAlpha = 0.6;
+
+        let x = startX;
+        ctx.font = '10px Nunito, sans-serif';
+        for (let i = this.activeGoodies.length - 1; i >= 0; i--) {
+            const text = this.activeGoodies[i];
+            const metrics = ctx.measureText(text);
+            ctx.fillText(text, x, y);
+            x -= (metrics.width + 8);
+        }
+        ctx.globalAlpha = 1;
     }
 
     _drawCombo(ctx) {
@@ -351,8 +419,9 @@ export class HUD {
         ctx.globalAlpha = this.funMessageAlpha;
 
         // Background pill
-        ctx.font = 'italic 800 16px Nunito';
+        ctx.font = '700 14px Outfit, sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         const metrics = ctx.measureText(this.funMessage);
         const pw = metrics.width + 30;
         const ph = 30;
@@ -407,11 +476,11 @@ export class HUD {
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         ctx.globalAlpha = this.tutorialAlpha;
 
-        const cy = GAME_HEIGHT * 0.45;
+        const cy = GAME_HEIGHT * 0.58;
 
         // Title with glow
-        renderer.drawText('🎮 How to Play', GAME_WIDTH / 2, cy - 100, {
-            font: '900 32px Nunito',
+        renderer.drawText('🎮 How to Play', GAME_WIDTH / 2, cy - 80, {
+            font: '900 28px Nunito',
             color: '#FFD700',
             shadowColor: 'rgba(255, 215, 0, 0.5)',
             shadowBlur: 20,
@@ -419,40 +488,46 @@ export class HUD {
 
         // Instruction cards
         const instructions = [
-            { emoji: '👆', text: 'Swipe to SHOO away', sub: 'Safe & earns small points', y: cy - 40 },
-            { emoji: '👇', text: 'Tap to SQUASH', sub: 'Big points but risky!', y: cy + 20 },
+            { emoji: '👆', text: 'Swipe to SHOO away', sub: 'Safe & earns small points', y: cy - 30 },
+            { emoji: '👇', text: 'Tap to SQUASH', sub: 'Big points but risky!', y: cy + 25 },
             { emoji: '⚠️', text: "Don't tap the baby!", sub: 'Game over if you do!', y: cy + 80 },
         ];
 
         for (const inst of instructions) {
             // Instruction background
             ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-            this._roundRect(ctx, 30, inst.y - 18, GAME_WIDTH - 60, 50, 12);
+            this._roundRect(ctx, 30, inst.y - 18, GAME_WIDTH - 60, 46, 12);
             ctx.fill();
 
             renderer.drawText(`${inst.emoji}  ${inst.text}`, GAME_WIDTH / 2, inst.y, {
-                font: '700 17px Nunito',
+                font: '700 16px Nunito',
                 color: '#fff',
                 shadowBlur: 0,
             });
-            renderer.drawText(inst.sub, GAME_WIDTH / 2, inst.y + 22, {
-                font: '600 12px Nunito',
+            renderer.drawText(inst.sub, GAME_WIDTH / 2, inst.y + 20, {
+                font: '600 11px Nunito',
                 color: 'rgba(255,255,255,0.5)',
                 shadowBlur: 0,
             });
         }
 
-        // Pro tip
-        renderer.drawText('💡 Flies are VERY hard to squash!', GAME_WIDTH / 2, cy + 140, {
-            font: '700 14px Nunito',
+        // Pro tips
+        renderer.drawText('💡 Flies are VERY hard to squash!', GAME_WIDTH / 2, cy + 120, {
+            font: '700 13px Nunito',
             color: '#FF6B6B',
+            shadowBlur: 0,
+        });
+
+        renderer.drawText('🪙 Survive longer to earn coins for goodies!', GAME_WIDTH / 2, cy + 140, {
+            font: '600 11px Nunito',
+            color: '#FFD700',
             shadowBlur: 0,
         });
 
         // Tap to start
         const blink = 0.5 + 0.5 * Math.sin(this.tutorialTimer * 4);
         ctx.globalAlpha = this.tutorialAlpha * blink;
-        renderer.drawText('TAP ANYWHERE TO START', GAME_WIDTH / 2, cy + 185, {
+        renderer.drawText('TAP ANYWHERE TO START', GAME_WIDTH / 2, cy + 160, {
             font: '900 16px Nunito',
             color: '#4AFF8F',
             shadowColor: 'rgba(74, 255, 143, 0.5)',

@@ -11,6 +11,10 @@ export class InputSystem {
         this.taps = [];       // [{x, y, time}] - consumed each frame
         this.swipes = [];     // [{startX, startY, endX, endY, dx, dy, speed, time}]
 
+        // Track last known position for continuous effects
+        this.lastX = 0;
+        this.lastY = 0;
+
         // Swipe detection thresholds
         this.SWIPE_MIN_DIST = 30;   // pixels in game coords
         this.SWIPE_MAX_TIME = 400;  // ms
@@ -59,6 +63,8 @@ export class InputSystem {
                 const pos = this._getGamePos(touch.clientX, touch.clientY);
                 t.currentX = pos.x;
                 t.currentY = pos.y;
+                this.lastX = pos.x;
+                this.lastY = pos.y;
             }
         }
     }
@@ -93,10 +99,11 @@ export class InputSystem {
         }
     }
 
-    // Mouse fallback
     _mouseId = 'mouse';
     _onMouseDown(e) {
         const pos = this._getGamePos(e.clientX, e.clientY);
+        this.lastX = pos.x;
+        this.lastY = pos.y;
         this.touches.set(this._mouseId, {
             startX: pos.x, startY: pos.y,
             currentX: pos.x, currentY: pos.y,
@@ -105,9 +112,11 @@ export class InputSystem {
     }
 
     _onMouseMove(e) {
+        const pos = this._getGamePos(e.clientX, e.clientY);
+        this.lastX = pos.x;
+        this.lastY = pos.y;
         const t = this.touches.get(this._mouseId);
         if (t) {
-            const pos = this._getGamePos(e.clientX, e.clientY);
             t.currentX = pos.x;
             t.currentY = pos.y;
         }

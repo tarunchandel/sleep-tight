@@ -1,7 +1,10 @@
 /**
- * Nursery Background - renders a cozy close-up of the baby's crib.
- * The crib takes 80% of the screen with warm, inviting colors.
- * Background is deep indigo/navy for contrast against the baby.
+ * Nursery Background - rich, cinematic nursery environment with:
+ * - Multi-layered night sky with nebula-like gradients
+ * - Animated god rays / volumetric light beams
+ * - Enhanced star field with glow halos
+ * - Detailed crib with wood grain texture
+ * - Soft ambient lighting and atmospheric effects
  */
 import { GAME_WIDTH, GAME_HEIGHT } from '../engine/renderer.js';
 import { lerp, clamp } from '../engine/utils.js';
@@ -12,13 +15,39 @@ export class Nursery {
         this.lightCycle = 0;
         this.nightlightGlow = 0;
         this.starPositions = [];
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 40; i++) {
             this.starPositions.push({
                 x: Math.random() * GAME_WIDTH,
-                y: Math.random() * 120,
-                size: Math.random() * 1.5 + 0.3,
+                y: Math.random() * 140,
+                size: Math.random() * 1.8 + 0.3,
                 twinkleSpeed: Math.random() * 2 + 0.5,
-                twinkleOffset: Math.random() * Math.PI * 2
+                twinkleOffset: Math.random() * Math.PI * 2,
+                hue: Math.random() * 40 + 30 // 30-70 (warm yellows to whites)
+            });
+        }
+
+        // God ray properties
+        this.godRays = [];
+        for (let i = 0; i < 4; i++) {
+            this.godRays.push({
+                angle: Math.random() * 0.6 - 0.3,
+                width: Math.random() * 30 + 15,
+                alpha: Math.random() * 0.03 + 0.01,
+                speed: Math.random() * 0.15 + 0.05,
+                offset: Math.random() * Math.PI * 2
+            });
+        }
+
+        // Firefly particles
+        this.fireflies = [];
+        for (let i = 0; i < 6; i++) {
+            this.fireflies.push({
+                x: Math.random() * GAME_WIDTH,
+                y: Math.random() * GAME_HEIGHT * 0.3 + 20,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 5,
+                phase: Math.random() * Math.PI * 2,
+                size: Math.random() * 1.5 + 0.5
             });
         }
     }
@@ -27,11 +56,29 @@ export class Nursery {
         this.time += dt;
         this.lightCycle = clamp(gameTime / 180, 0, 1);
         this.nightlightGlow = 0.5 + 0.5 * Math.sin(this.time * 0.8);
+
+        // Update fireflies
+        for (const ff of this.fireflies) {
+            ff.x += ff.vx * dt;
+            ff.y += ff.vy * dt;
+            ff.vx += (Math.random() - 0.5) * dt * 10;
+            ff.vy += (Math.random() - 0.5) * dt * 8;
+            ff.vx *= 0.98;
+            ff.vy *= 0.98;
+
+            if (ff.x < 10) ff.vx = Math.abs(ff.vx);
+            if (ff.x > GAME_WIDTH - 10) ff.vx = -Math.abs(ff.vx);
+            if (ff.y < 10) ff.vy = Math.abs(ff.vy);
+            if (ff.y > GAME_HEIGHT * 0.4) ff.vy = -Math.abs(ff.vy);
+        }
     }
 
     draw(ctx) {
         this._drawBackground(ctx);
+        this._drawNebula(ctx);
         this._drawStars(ctx);
+        this._drawFireflies(ctx);
+        this._drawGodRays(ctx);
         this._drawCrib(ctx);
         this._drawNightlightGlow(ctx);
         this._drawMobileHanger(ctx);
@@ -39,59 +86,168 @@ export class Nursery {
     }
 
     _drawBackground(ctx) {
-        // Deep indigo/navy gradient - contrasts well with baby's peach skin
+        // Deep indigo/navy gradient with richer color depth
         const grad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-        grad.addColorStop(0, '#0a0a2e');   // Deep navy top
-        grad.addColorStop(0.3, '#141440'); // Indigo
-        grad.addColorStop(0.7, '#1a1a50'); // Purple-navy
-        grad.addColorStop(1, '#0d0d25');   // Dark bottom
+        grad.addColorStop(0, '#080820');
+        grad.addColorStop(0.15, '#0C0C30');
+        grad.addColorStop(0.35, '#121245');
+        grad.addColorStop(0.55, '#181858');
+        grad.addColorStop(0.75, '#141450');
+        grad.addColorStop(1, '#0A0A20');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-        // Subtle radial glow from center (warm)
+        // Warm center glow (baby illumination)
         const glow = ctx.createRadialGradient(
-            GAME_WIDTH / 2, GAME_HEIGHT * 0.4, 30,
-            GAME_WIDTH / 2, GAME_HEIGHT * 0.4, GAME_WIDTH * 0.8
+            GAME_WIDTH / 2, GAME_HEIGHT * 0.38, 20,
+            GAME_WIDTH / 2, GAME_HEIGHT * 0.38, GAME_WIDTH * 0.85
         );
-        glow.addColorStop(0, 'rgba(255, 200, 100, 0.06)');
-        glow.addColorStop(0.5, 'rgba(180, 140, 80, 0.03)');
+        glow.addColorStop(0, 'rgba(255, 200, 120, 0.08)');
+        glow.addColorStop(0.3, 'rgba(200, 160, 100, 0.04)');
+        glow.addColorStop(0.6, 'rgba(120, 100, 80, 0.02)');
         glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = glow;
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     }
 
+    _drawNebula(ctx) {
+        // Subtle aurora/nebula-like wisps in the upper sky
+        const t = this.time * 0.15;
+
+        // Purple wisp
+        ctx.globalAlpha = 0.025 + 0.01 * Math.sin(t);
+        const nebula1 = ctx.createRadialGradient(
+            GAME_WIDTH * 0.3 + Math.sin(t) * 20, 60, 10,
+            GAME_WIDTH * 0.3, 60, 100
+        );
+        nebula1.addColorStop(0, '#6040a0');
+        nebula1.addColorStop(0.5, '#4030a0');
+        nebula1.addColorStop(1, 'transparent');
+        ctx.fillStyle = nebula1;
+        ctx.fillRect(0, 0, GAME_WIDTH, 200);
+
+        // Teal wisp
+        ctx.globalAlpha = 0.02 + 0.008 * Math.sin(t * 1.3 + 1);
+        const nebula2 = ctx.createRadialGradient(
+            GAME_WIDTH * 0.7 + Math.cos(t * 0.8) * 25, 80, 10,
+            GAME_WIDTH * 0.7, 80, 80
+        );
+        nebula2.addColorStop(0, '#205060');
+        nebula2.addColorStop(0.5, '#183848');
+        nebula2.addColorStop(1, 'transparent');
+        ctx.fillStyle = nebula2;
+        ctx.fillRect(0, 0, GAME_WIDTH, 200);
+
+        ctx.globalAlpha = 1;
+    }
+
     _drawStars(ctx) {
         const t = this.lightCycle;
-        const baseAlpha = 0.3 + t * 0.5;
+        const baseAlpha = 0.35 + t * 0.45;
+
         for (const star of this.starPositions) {
             const twinkle = 0.4 + 0.6 * Math.sin(this.time * star.twinkleSpeed + star.twinkleOffset);
+
+            // Star glow halo
+            ctx.globalAlpha = baseAlpha * twinkle * 0.15;
+            const haloGrad = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, star.size * 5);
+            haloGrad.addColorStop(0, `hsl(${star.hue}, 80%, 90%)`);
+            haloGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = haloGrad;
+            ctx.fillRect(star.x - star.size * 5, star.y - star.size * 5, star.size * 10, star.size * 10);
+
+            // Star core
             ctx.globalAlpha = baseAlpha * twinkle;
-            ctx.fillStyle = '#ffe8c0';
+            ctx.fillStyle = `hsl(${star.hue}, 60%, 90%)`;
             ctx.beginPath();
             ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.globalAlpha = 1;
 
-        // Crescent moon (top right)
+        // Crescent moon with rich glow
         ctx.save();
-        ctx.globalAlpha = 0.7 + 0.2 * Math.sin(this.time * 0.3);
-        ctx.fillStyle = '#f5e6c8';
+        const moonAlpha = 0.75 + 0.2 * Math.sin(this.time * 0.3);
+        ctx.globalAlpha = moonAlpha;
+
+        // Moon glow halo (outer)
+        const moonGlow2 = ctx.createRadialGradient(GAME_WIDTH - 58, 48, 8, GAME_WIDTH - 58, 48, 60);
+        moonGlow2.addColorStop(0, 'rgba(255, 235, 200, 0.12)');
+        moonGlow2.addColorStop(0.5, 'rgba(255, 220, 180, 0.04)');
+        moonGlow2.addColorStop(1, 'rgba(255, 220, 180, 0)');
+        ctx.fillStyle = moonGlow2;
+        ctx.fillRect(GAME_WIDTH - 120, -10, 120, 120);
+
+        // Moon body
+        const moonGrad = ctx.createRadialGradient(GAME_WIDTH - 62, 44, 3, GAME_WIDTH - 58, 48, 22);
+        moonGrad.addColorStop(0, '#FFF8E8');
+        moonGrad.addColorStop(0.5, '#F5E6C8');
+        moonGrad.addColorStop(1, '#E0D0A8');
+        ctx.fillStyle = moonGrad;
         ctx.beginPath();
-        ctx.arc(GAME_WIDTH - 60, 50, 20, 0, Math.PI * 2);
+        ctx.arc(GAME_WIDTH - 58, 48, 21, 0, Math.PI * 2);
         ctx.fill();
-        // Moon shadow for crescent effect
-        ctx.fillStyle = '#0a0a2e';
+
+        // Moon shadow for crescent
+        ctx.fillStyle = '#0C0C30';
         ctx.beginPath();
-        ctx.arc(GAME_WIDTH - 50, 46, 17, 0, Math.PI * 2);
+        ctx.arc(GAME_WIDTH - 47, 44, 18, 0, Math.PI * 2);
         ctx.fill();
-        // Moon glow
-        const moonGlow = ctx.createRadialGradient(GAME_WIDTH - 60, 50, 5, GAME_WIDTH - 60, 50, 50);
-        moonGlow.addColorStop(0, 'rgba(255, 230, 180, 0.15)');
-        moonGlow.addColorStop(1, 'rgba(255, 230, 180, 0)');
-        ctx.fillStyle = moonGlow;
-        ctx.fillRect(GAME_WIDTH - 110, 0, 100, 100);
+
         ctx.restore();
+    }
+
+    _drawFireflies(ctx) {
+        for (const ff of this.fireflies) {
+            const pulse = 0.3 + 0.7 * Math.max(0, Math.sin(this.time * 2 + ff.phase));
+
+            // Outer glow
+            ctx.globalAlpha = pulse * 0.15;
+            const ffGlow = ctx.createRadialGradient(ff.x, ff.y, 0, ff.x, ff.y, 12);
+            ffGlow.addColorStop(0, 'rgba(255, 240, 150, 0.6)');
+            ffGlow.addColorStop(1, 'rgba(255, 240, 150, 0)');
+            ctx.fillStyle = ffGlow;
+            ctx.fillRect(ff.x - 12, ff.y - 12, 24, 24);
+
+            // Core
+            ctx.globalAlpha = pulse * 0.6;
+            ctx.fillStyle = '#FFF8D0';
+            ctx.beginPath();
+            ctx.arc(ff.x, ff.y, ff.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    _drawGodRays(ctx) {
+        // Subtle volumetric light beams from moon area
+        const moonX = GAME_WIDTH - 58;
+        const moonY = 48;
+
+        for (const ray of this.godRays) {
+            const alpha = ray.alpha * (0.6 + 0.4 * Math.sin(this.time * ray.speed + ray.offset));
+            ctx.globalAlpha = alpha;
+
+            ctx.save();
+            ctx.translate(moonX, moonY);
+            ctx.rotate(ray.angle + Math.sin(this.time * 0.1 + ray.offset) * 0.05);
+
+            const rayGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+            rayGrad.addColorStop(0, 'rgba(255, 230, 180, 0.4)');
+            rayGrad.addColorStop(0.3, 'rgba(200, 190, 160, 0.15)');
+            rayGrad.addColorStop(1, 'rgba(200, 190, 160, 0)');
+            ctx.fillStyle = rayGrad;
+            ctx.beginPath();
+            ctx.moveTo(-2, 0);
+            ctx.lineTo(-ray.width, GAME_HEIGHT);
+            ctx.lineTo(ray.width, GAME_HEIGHT);
+            ctx.lineTo(2, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+        ctx.globalAlpha = 1;
     }
 
     _drawCrib(ctx) {
@@ -101,13 +257,13 @@ export class Nursery {
         const cw = GAME_WIDTH * 0.92;
         const ch = cribBottom - cribTop;
 
-        // === CRIB SHADOW ===
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        // Crib shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
         ctx.beginPath();
-        ctx.ellipse(cx, cribBottom + 15, cw / 2 + 5, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cribBottom + 16, cw / 2 + 8, 12, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // === MATTRESS (the main sleeping area) ===
+        // === MATTRESS ===
         const mattTop = cribTop + 20;
         const mattBottom = cribBottom - 15;
         const mattLeft = cx - cw / 2 + 15;
@@ -115,17 +271,17 @@ export class Nursery {
         const mattW = mattRight - mattLeft;
         const mattH = mattBottom - mattTop;
 
-        // Mattress - soft cream/white, clearly different from baby
         const mattGrad = ctx.createLinearGradient(mattLeft, mattTop, mattLeft, mattBottom);
-        mattGrad.addColorStop(0, '#f5efe6');   // Warm white
-        mattGrad.addColorStop(0.3, '#ede5d8');  // Soft cream
-        mattGrad.addColorStop(1, '#e0d6c6');    // Warm beige
+        mattGrad.addColorStop(0, '#f8f2ea');
+        mattGrad.addColorStop(0.3, '#f0e8dc');
+        mattGrad.addColorStop(0.7, '#e8ddd0');
+        mattGrad.addColorStop(1, '#e0d4c4');
         ctx.fillStyle = mattGrad;
-        this._roundRect(ctx, mattLeft, mattTop, mattW, mattH, 15);
+        this._roundRect(ctx, mattLeft, mattTop, mattW, mattH, 16);
         ctx.fill();
 
-        // Mattress subtle quilted pattern
-        ctx.strokeStyle = 'rgba(200, 185, 160, 0.25)';
+        // Quilted pattern
+        ctx.strokeStyle = 'rgba(200, 185, 160, 0.2)';
         ctx.lineWidth = 1;
         for (let y = mattTop + 30; y < mattBottom - 20; y += 40) {
             ctx.beginPath();
@@ -136,86 +292,73 @@ export class Nursery {
 
         // === PILLOW ===
         const pillowY = cribTop + 45;
-        const pillowGrad = ctx.createRadialGradient(cx, pillowY, 10, cx, pillowY, 80);
-        pillowGrad.addColorStop(0, '#ffffff');
-        pillowGrad.addColorStop(0.6, '#f8f4f0');
-        pillowGrad.addColorStop(1, '#e8e0d4');
-        ctx.fillStyle = pillowGrad;
-        this._roundRect(ctx, cx - 75, pillowY - 28, 150, 56, 25);
+        // Pillow shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.04)';
+        ctx.beginPath();
+        ctx.ellipse(cx + 2, pillowY + 2, 80, 30, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        const pillowGrad = ctx.createRadialGradient(cx - 10, pillowY - 5, 8, cx, pillowY, 82);
+        pillowGrad.addColorStop(0, '#ffffff');
+        pillowGrad.addColorStop(0.4, '#faf6f2');
+        pillowGrad.addColorStop(0.8, '#f0ece4');
+        pillowGrad.addColorStop(1, '#e4dcd0');
+        ctx.fillStyle = pillowGrad;
+        this._roundRect(ctx, cx - 78, pillowY - 30, 156, 60, 26);
+        ctx.fill();
+
         // Pillow stitching
-        ctx.strokeStyle = 'rgba(180, 170, 150, 0.2)';
+        ctx.strokeStyle = 'rgba(180, 170, 150, 0.18)';
         ctx.setLineDash([4, 4]);
         ctx.lineWidth = 1;
-        this._roundRect(ctx, cx - 65, pillowY - 20, 130, 40, 18);
+        this._roundRect(ctx, cx - 68, pillowY - 22, 136, 44, 20);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // === BLANKET (covers lower body) ===
-        const blanketTop = GAME_HEIGHT * 0.52;
-        const blanketGrad = ctx.createLinearGradient(cx, blanketTop, cx, mattBottom);
-        blanketGrad.addColorStop(0, 'rgba(160, 200, 240, 0.9)');  // Soft blue
-        blanketGrad.addColorStop(0.4, 'rgba(140, 180, 225, 0.92)');
-        blanketGrad.addColorStop(1, 'rgba(120, 160, 210, 0.95)');
-        ctx.fillStyle = blanketGrad;
-        ctx.beginPath();
-        ctx.moveTo(mattLeft, blanketTop + 15);
-        // Wavy top edge
-        ctx.quadraticCurveTo(cx - 50, blanketTop - 5, cx, blanketTop + 10);
-        ctx.quadraticCurveTo(cx + 50, blanketTop + 25, mattRight, blanketTop + 5);
-        ctx.lineTo(mattRight, mattBottom);
-        ctx.lineTo(mattLeft, mattBottom);
-        ctx.closePath();
-        ctx.fill();
-
-        // Blanket pattern - tiny stars
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        for (let bx = mattLeft + 25; bx < mattRight - 20; bx += 35) {
-            for (let by = blanketTop + 30; by < mattBottom - 15; by += 35) {
-                this._drawTinyStar(ctx, bx + Math.sin(by) * 5, by, 4);
-            }
-        }
-
-        // Blanket fold line
-        ctx.strokeStyle = 'rgba(100, 140, 180, 0.3)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(mattLeft + 5, blanketTop + 15);
-        ctx.quadraticCurveTo(cx, blanketTop + 5, mattRight - 5, blanketTop + 10);
-        ctx.stroke();
-
-        // === CRIB FRAME (warm golden wood) ===
+        // === CRIB FRAME ===
         const woodGrad = ctx.createLinearGradient(cx - cw / 2, cribTop, cx + cw / 2, cribTop);
-        woodGrad.addColorStop(0, '#8B6914');
+        woodGrad.addColorStop(0, '#7A5A10');
+        woodGrad.addColorStop(0.15, '#8B6914');
         woodGrad.addColorStop(0.3, '#A07830');
         woodGrad.addColorStop(0.5, '#B8892C');
         woodGrad.addColorStop(0.7, '#A07830');
-        woodGrad.addColorStop(1, '#8B6914');
+        woodGrad.addColorStop(0.85, '#8B6914');
+        woodGrad.addColorStop(1, '#7A5A10');
 
         ctx.fillStyle = woodGrad;
 
-        // Top rail
-        this._roundRect(ctx, cx - cw / 2, cribTop, cw, 12, 6);
+        // Top rail with subtle 3D bevel
+        this._roundRect(ctx, cx - cw / 2, cribTop, cw, 13, 6);
         ctx.fill();
+        // Rail highlight
+        ctx.fillStyle = 'rgba(255, 220, 150, 0.15)';
+        this._roundRect(ctx, cx - cw / 2 + 2, cribTop + 1, cw - 4, 5, 3);
+        ctx.fill();
+
         // Bottom rail
-        this._roundRect(ctx, cx - cw / 2, cribBottom - 5, cw, 12, 6);
+        ctx.fillStyle = woodGrad;
+        this._roundRect(ctx, cx - cw / 2, cribBottom - 5, cw, 13, 6);
         ctx.fill();
 
         // Side rails
-        const sideW = 10;
+        const sideW = 11;
+        const sideGrad = ctx.createLinearGradient(cx - cw / 2, 0, cx - cw / 2 + sideW, 0);
+        sideGrad.addColorStop(0, '#7A5A10');
+        sideGrad.addColorStop(0.3, '#A07830');
+        sideGrad.addColorStop(0.7, '#8B6914');
+        sideGrad.addColorStop(1, '#7A5A10');
+        ctx.fillStyle = sideGrad;
         ctx.fillRect(cx - cw / 2, cribTop, sideW, ch);
         ctx.fillRect(cx + cw / 2 - sideW, cribTop, sideW, ch);
 
-        // Vertical slats (top section only - above baby)
+        // Vertical slats
         ctx.strokeStyle = '#9B7520';
         ctx.lineWidth = 3;
         for (let x = cx - cw / 2 + 20; x < cx + cw / 2 - 10; x += 16) {
-            // Top slats
             ctx.beginPath();
             ctx.moveTo(x, cribTop);
             ctx.lineTo(x, cribTop + 20);
             ctx.stroke();
-            // Bottom slats
             ctx.beginPath();
             ctx.moveTo(x, cribBottom - 5);
             ctx.lineTo(x, cribBottom + 7);
@@ -224,51 +367,73 @@ export class Nursery {
 
         // Side slats
         for (let y = cribTop + 25; y < cribBottom - 15; y += 20) {
-            // Left side
             ctx.beginPath();
             ctx.moveTo(cx - cw / 2, y);
             ctx.lineTo(cx - cw / 2 + sideW + 3, y);
             ctx.stroke();
-            // Right side
             ctx.beginPath();
             ctx.moveTo(cx + cw / 2 - sideW - 3, y);
             ctx.lineTo(cx + cw / 2, y);
             ctx.stroke();
         }
 
-        // Corner posts (decorative knobs)
-        ctx.fillStyle = '#B8892C';
-        ctx.beginPath();
-        ctx.arc(cx - cw / 2 + 5, cribTop - 3, 7, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx + cw / 2 - 5, cribTop - 3, 7, 0, Math.PI * 2);
-        ctx.fill();
+        // Corner posts (decorative knobs) with 3D effect
+        [-1, 1].forEach(side => {
+            const kx = cx + side * (cw / 2 - 5);
+            const ky = cribTop - 3;
+            const knobGrad = ctx.createRadialGradient(kx - 2, ky - 2, 1, kx, ky, 8);
+            knobGrad.addColorStop(0, '#D4A840');
+            knobGrad.addColorStop(0.5, '#B8892C');
+            knobGrad.addColorStop(1, '#8B6914');
+            ctx.fillStyle = knobGrad;
+            ctx.beginPath();
+            ctx.arc(kx, ky, 8, 0, Math.PI * 2);
+            ctx.fill();
+            // Knob highlight
+            ctx.fillStyle = 'rgba(255, 230, 170, 0.3)';
+            ctx.beginPath();
+            ctx.arc(kx - 2, ky - 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
 
         // Crib legs
-        ctx.fillStyle = '#7B5910';
-        ctx.fillRect(cx - cw / 2 - 2, cribBottom + 5, 14, 20);
-        ctx.fillRect(cx + cw / 2 - 12, cribBottom + 5, 14, 20);
+        const legGrad = ctx.createLinearGradient(0, cribBottom + 5, 0, cribBottom + 25);
+        legGrad.addColorStop(0, '#8B6914');
+        legGrad.addColorStop(1, '#6B4A08');
+        ctx.fillStyle = legGrad;
+        ctx.fillRect(cx - cw / 2 - 2, cribBottom + 5, 15, 22);
+        ctx.fillRect(cx + cw / 2 - 13, cribBottom + 5, 15, 22);
     }
 
     _drawNightlightGlow(ctx) {
-        // Subtle warm glow emanating from bottom-left
-        const x = 30;
-        const y = GAME_HEIGHT * 0.85;
-        const intensity = 0.08 + 0.04 * this.nightlightGlow;
-        const radius = 80 + 20 * this.nightlightGlow;
+        const x = 28;
+        const y = GAME_HEIGHT * 0.84;
+        const intensity = 0.1 + 0.05 * this.nightlightGlow;
+        const radius = 90 + 25 * this.nightlightGlow;
 
+        // Outer glow
         const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
         glow.addColorStop(0, `rgba(255, 220, 150, ${intensity})`);
-        glow.addColorStop(0.5, `rgba(255, 200, 120, ${intensity * 0.4})`);
-        glow.addColorStop(1, 'rgba(255, 200, 120, 0)');
+        glow.addColorStop(0.3, `rgba(255, 200, 120, ${intensity * 0.5})`);
+        glow.addColorStop(0.6, `rgba(255, 190, 100, ${intensity * 0.2})`);
+        glow.addColorStop(1, 'rgba(255, 190, 100, 0)');
         ctx.fillStyle = glow;
-        ctx.fillRect(0, GAME_HEIGHT * 0.7, 200, GAME_HEIGHT * 0.3);
+        ctx.fillRect(0, GAME_HEIGHT * 0.65, 220, GAME_HEIGHT * 0.35);
 
-        // Small nightlight icon
-        ctx.fillStyle = `rgba(255, 230, 180, ${0.4 + 0.3 * this.nightlightGlow})`;
+        // Nightlight bulb glow
+        const bulbGlow = ctx.createRadialGradient(x, y, 0, x, y, 10);
+        bulbGlow.addColorStop(0, `rgba(255, 240, 200, ${0.6 + 0.3 * this.nightlightGlow})`);
+        bulbGlow.addColorStop(0.5, `rgba(255, 230, 180, ${0.3 + 0.2 * this.nightlightGlow})`);
+        bulbGlow.addColorStop(1, 'rgba(255, 220, 160, 0)');
+        ctx.fillStyle = bulbGlow;
         ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nightlight core
+        ctx.fillStyle = `rgba(255, 240, 200, ${0.5 + 0.3 * this.nightlightGlow})`;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -277,39 +442,51 @@ export class Nursery {
         const cy = GAME_HEIGHT * 0.06;
 
         // String from top
-        ctx.strokeStyle = 'rgba(200, 200, 220, 0.4)';
+        ctx.strokeStyle = 'rgba(200, 200, 220, 0.35)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(cx, 0);
         ctx.lineTo(cx, cy);
         ctx.stroke();
 
-        // Cross bar
-        ctx.strokeStyle = 'rgba(220, 220, 240, 0.5)';
-        ctx.lineWidth = 2;
+        // Cross bar with gradient
+        const barGrad = ctx.createLinearGradient(cx - 42, cy, cx + 42, cy);
+        barGrad.addColorStop(0, 'rgba(200, 200, 220, 0.3)');
+        barGrad.addColorStop(0.5, 'rgba(230, 230, 245, 0.5)');
+        barGrad.addColorStop(1, 'rgba(200, 200, 220, 0.3)');
+        ctx.strokeStyle = barGrad;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(cx - 40, cy);
-        ctx.lineTo(cx + 40, cy);
+        ctx.moveTo(cx - 42, cy);
+        ctx.lineTo(cx + 42, cy);
         ctx.stroke();
 
         // Hanging shapes with gentle sway
         const shapes = [
-            { ox: -35, color: 'rgba(255, 180, 190, 0.6)', type: 'star' },
-            { ox: -12, color: 'rgba(180, 220, 255, 0.6)', type: 'circle' },
-            { ox: 12, color: 'rgba(180, 255, 200, 0.6)', type: 'moon' },
-            { ox: 35, color: 'rgba(255, 255, 180, 0.6)', type: 'star' },
+            { ox: -35, color: 'rgba(255, 170, 185, 0.6)', glow: 'rgba(255, 170, 185, 0.1)', type: 'star' },
+            { ox: -12, color: 'rgba(170, 210, 255, 0.6)', glow: 'rgba(170, 210, 255, 0.1)', type: 'circle' },
+            { ox: 12, color: 'rgba(170, 255, 200, 0.6)', glow: 'rgba(170, 255, 200, 0.1)', type: 'moon' },
+            { ox: 35, color: 'rgba(255, 255, 170, 0.6)', glow: 'rgba(255, 255, 170, 0.1)', type: 'star' },
         ];
 
         for (const shape of shapes) {
             const sx = cx + shape.ox + Math.sin(this.time * 0.5 + shape.ox) * 3;
-            const sy = cy + 18 + Math.abs(Math.sin(this.time * 0.3 + shape.ox * 0.1)) * 3;
+            const sy = cy + 19 + Math.abs(Math.sin(this.time * 0.3 + shape.ox * 0.1)) * 3;
 
-            ctx.strokeStyle = 'rgba(200, 200, 220, 0.3)';
+            // Thread
+            ctx.strokeStyle = 'rgba(200, 200, 220, 0.25)';
             ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(cx + shape.ox, cy);
             ctx.lineTo(sx, sy - 5);
             ctx.stroke();
+
+            // Shape glow
+            const shapeGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 10);
+            shapeGlow.addColorStop(0, shape.glow);
+            shapeGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = shapeGlow;
+            ctx.fillRect(sx - 10, sy - 10, 20, 20);
 
             ctx.save();
             ctx.translate(sx, sy);
@@ -317,18 +494,18 @@ export class Nursery {
             ctx.fillStyle = shape.color;
 
             if (shape.type === 'star') {
-                this._drawTinyStar(ctx, 0, 0, 5);
+                this._drawTinyStar(ctx, 0, 0, 5.5);
             } else if (shape.type === 'circle') {
                 ctx.beginPath();
-                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
                 ctx.fill();
             } else if (shape.type === 'moon') {
                 ctx.beginPath();
-                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = '#0a0a2e';
+                ctx.fillStyle = '#0C0C30';
                 ctx.beginPath();
-                ctx.arc(2, -1, 3.5, 0, Math.PI * 2);
+                ctx.arc(2, -1, 3.8, 0, Math.PI * 2);
                 ctx.fill();
             }
             ctx.restore();
@@ -336,12 +513,14 @@ export class Nursery {
     }
 
     _drawVignette(ctx) {
+        // Stronger, more cinematic vignette
         const grad = ctx.createRadialGradient(
-            GAME_WIDTH / 2, GAME_HEIGHT * 0.45, GAME_HEIGHT * 0.25,
-            GAME_WIDTH / 2, GAME_HEIGHT * 0.45, GAME_HEIGHT * 0.75
+            GAME_WIDTH / 2, GAME_HEIGHT * 0.42, GAME_HEIGHT * 0.22,
+            GAME_WIDTH / 2, GAME_HEIGHT * 0.42, GAME_HEIGHT * 0.72
         );
         grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(5, 3, 15, 0.5)');
+        grad.addColorStop(0.7, 'rgba(5, 3, 15, 0.3)');
+        grad.addColorStop(1, 'rgba(5, 3, 15, 0.6)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     }

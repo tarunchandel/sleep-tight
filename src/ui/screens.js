@@ -30,13 +30,15 @@ export class MenuScreen {
         ];
         this.currentTagline = 0;
         this.taglineTimer = 0;
+        this.coins = 0;
     }
 
     _setupButtons() {
         this.buttons = [
-            { id: 'play', label: '▶  PLAY', x: GAME_WIDTH / 2, y: 400, w: 220, h: 56, color: '#22D66F', textColor: '#0a2e14', glow: 'rgba(34, 214, 111, 0.4)' },
-            { id: 'leaderboard', label: '🏆  SCORES', x: GAME_WIDTH / 2, y: 470, w: 220, h: 48, color: '#FFB300', textColor: '#3d2c08', glow: 'rgba(255, 179, 0, 0.3)' },
-            { id: 'settings', label: '⚙️  SETTINGS', x: GAME_WIDTH / 2, y: 530, w: 220, h: 48, color: 'rgba(255,255,255,0.15)', textColor: '#fff', glow: 'rgba(255,255,255,0.1)' },
+            { id: 'play', label: '▶  PLAY', x: GAME_WIDTH / 2, y: 380, w: 220, h: 56, color: '#22D66F', textColor: '#0a2e14', glow: 'rgba(34, 214, 111, 0.4)' },
+            { id: 'shop', label: '🛒  SHOP', x: GAME_WIDTH / 2, y: 445, w: 220, h: 48, color: '#FFD700', textColor: '#3d2c08', glow: 'rgba(255, 215, 0, 0.3)' },
+            { id: 'leaderboard', label: '🏆  SCORES', x: GAME_WIDTH / 2, y: 505, w: 220, h: 48, color: '#FFB300', textColor: '#3d2c08', glow: 'rgba(255, 179, 0, 0.3)' },
+            { id: 'settings', label: '⚙️  SETTINGS', x: GAME_WIDTH / 2, y: 565, w: 220, h: 48, color: 'rgba(255,255,255,0.15)', textColor: '#fff', glow: 'rgba(255,255,255,0.1)' },
         ];
     }
 
@@ -123,6 +125,26 @@ export class MenuScreen {
         });
         ctx.globalAlpha = 1;
 
+        // Coin balance badge - subtle but visible
+        if (this.coins > 0) {
+            ctx.globalAlpha = this.buttonsAlpha * 0.8;
+            // Background pill
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+            this._roundRectPath(ctx, GAME_WIDTH / 2 - 50, 295, 100, 26, 13);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)';
+            ctx.lineWidth = 1;
+            this._roundRectPath(ctx, GAME_WIDTH / 2 - 50, 295, 100, 26, 13);
+            ctx.stroke();
+            renderer.drawText(`🪙 ${this.coins}`, GAME_WIDTH / 2, 308, {
+                font: '700 13px Nunito',
+                color: '#FFD700',
+                shadowBlur: 0,
+                shadowOffY: 0,
+            });
+            ctx.globalAlpha = 1;
+        }
+
         // Buttons
         ctx.globalAlpha = this.buttonsAlpha;
         for (const btn of this.buttons) {
@@ -132,7 +154,7 @@ export class MenuScreen {
 
         // Version with fun flavor
         ctx.globalAlpha = 0.35;
-        renderer.drawText('v2.0.0 — "The Fly Hunter Update"', GAME_WIDTH / 2, GAME_HEIGHT - 25, {
+        renderer.drawText('v3.0.0 — "The Coin Hunter Update"', GAME_WIDTH / 2, GAME_HEIGHT - 25, {
             font: '600 10px Nunito',
             color: '#fff',
         });
@@ -221,6 +243,10 @@ export class MenuScreen {
         this.subtitleAlpha = 0;
         this.buttonsAlpha = 0;
     }
+
+    setCoins(coins) {
+        this.coins = coins || 0;
+    }
 }
 
 export class GameOverScreen {
@@ -232,13 +258,15 @@ export class GameOverScreen {
         this.reason = '';
         this.isNewHighScore = false;
         this.buttons = [
-            { id: 'retry', label: '🔄  PLAY AGAIN', x: GAME_WIDTH / 2, y: 570, w: 220, h: 56, color: '#22D66F', textColor: '#0a2e14', glow: 'rgba(34, 214, 111, 0.4)' },
-            { id: 'menu', label: '🏠  MAIN MENU', x: GAME_WIDTH / 2, y: 635, w: 220, h: 48, color: 'rgba(255,255,255,0.15)', textColor: '#fff', glow: 'rgba(255,255,255,0.1)' },
+            { id: 'retry', label: '🔄  PLAY AGAIN', x: GAME_WIDTH / 2, y: GAME_HEIGHT - 90, w: 220, h: 56, color: '#22D66F', textColor: '#0a2e14', glow: 'rgba(34, 214, 111, 0.4)' },
+            { id: 'menu', label: '🏠  MAIN MENU', x: GAME_WIDTH / 2, y: GAME_HEIGHT - 32, w: 220, h: 48, color: 'rgba(255,255,255,0.15)', textColor: '#fff', glow: 'rgba(255,255,255,0.1)' },
         ];
         this.funMessage = '';
+        this.coinsEarned = 0;
+        this.totalCoins = 0;
     }
 
-    show(score, timeSurvived, fliesNeutralized, reason, isHighScore) {
+    show(score, timeSurvived, fliesNeutralized, reason, isHighScore, coinsEarned = 0, totalCoins = 0) {
         this.animTimer = 0;
         this.score = Math.round(score);
         this.timeSurvived = timeSurvived;
@@ -259,6 +287,8 @@ export class GameOverScreen {
             "Maybe I need a bug zapper... ⚡",
         ];
         this.funMessage = messages[Math.floor(Math.random() * messages.length)];
+        this.coinsEarned = coinsEarned;
+        this.totalCoins = totalCoins;
     }
 
     update(dt) {
@@ -277,8 +307,8 @@ export class GameOverScreen {
     }
 
     draw(ctx, renderer) {
-        // Dark backdrop
-        const overlayAlpha = Math.min(0.9, this.animTimer * 2);
+        // Semi-transparent backdrop — let the crying baby show through
+        const overlayAlpha = Math.min(0.65, this.animTimer * 1.5);
         ctx.fillStyle = `rgba(5, 5, 20, ${overlayAlpha})`;
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
@@ -287,55 +317,36 @@ export class GameOverScreen {
         const headerProgress = Math.min(1, (this.animTimer - 0.3) * 3);
         ctx.globalAlpha = headerProgress;
 
-        // Big crying emoji
-        renderer.drawText('😭', GAME_WIDTH / 2, 120, {
-            font: '70px sans-serif',
-            shadowBlur: 0,
-        });
-
-        // Title
-        renderer.drawText('Baby Woke Up!', GAME_WIDTH / 2, 200, {
-            font: '900 36px Nunito',
+        // ── Title ──
+        renderer.drawText('Baby Woke Up!', GAME_WIDTH / 2, GAME_HEIGHT * 0.52, {
+            font: '900 34px Nunito',
             color: '#FF6B6B',
             shadowColor: 'rgba(255, 107, 107, 0.5)',
             shadowBlur: 20,
         });
 
-        // Reason
+        // ── Reason — compact single line ──
         ctx.globalAlpha = Math.min(1, (this.animTimer - 0.6) * 2);
-        renderer.drawText('💬 Why I woke up:', GAME_WIDTH / 2, 250, {
-            font: '700 14px Nunito',
+        renderer.drawText(this.reason, GAME_WIDTH / 2, GAME_HEIGHT * 0.57, {
+            font: '700 13px Nunito',
+            color: '#FFB020',
+            maxWidth: GAME_WIDTH - 50,
+        });
+
+        // ── Stats Row — flies count inline ──
+        ctx.globalAlpha = Math.min(1, (this.animTimer - 0.8) * 2);
+        const statsY = GAME_HEIGHT * 0.63;
+
+        renderer.drawText(`🪰 ${this.fliesNeutralized} flies dealt with`, GAME_WIDTH / 2, statsY, {
+            font: '600 12px Nunito',
             color: 'rgba(255,255,255,0.6)',
         });
 
-        // Reason card
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-        this._roundRectPath(ctx, 30, 262, GAME_WIDTH - 60, 35, 10);
-        ctx.fill();
-
-        renderer.drawText(this.reason, GAME_WIDTH / 2, 280, {
-            font: '800 15px Nunito',
-            color: '#FFB020',
-            maxWidth: GAME_WIDTH - 70,
-        });
-
-        // Score section
-        ctx.globalAlpha = Math.min(1, (this.animTimer - 0.8) * 2);
-        const statsY = 340;
-
-        // Big golden score
-        renderer.drawText(this.score.toLocaleString(), GAME_WIDTH / 2, statsY, {
-            font: '900 48px Nunito',
-            color: '#FFD700',
-            shadowColor: 'rgba(255, 215, 0, 0.5)',
-            shadowBlur: 20,
-        });
-
-        // High score fireworks
+        // ── High score highlight ──
         if (this.isNewHighScore) {
             const blink = 0.5 + 0.5 * Math.sin(this.animTimer * 6);
             ctx.globalAlpha = blink;
-            renderer.drawText('🎉 NEW HIGH SCORE! 🎉', GAME_WIDTH / 2, statsY + 35, {
+            renderer.drawText('🎉 NEW HIGH SCORE! 🎉', GAME_WIDTH / 2, GAME_HEIGHT * 0.68, {
                 font: '900 16px Nunito',
                 color: '#FF4444',
                 shadowColor: 'rgba(255, 68, 68, 0.5)',
@@ -344,44 +355,59 @@ export class GameOverScreen {
             ctx.globalAlpha = Math.min(1, (this.animTimer - 0.8) * 2);
         }
 
-        // Stats row with icons
-        const statRowY = statsY + 70;
+        // ── Fun Message — uses Outfit font, no italics ──
+        ctx.globalAlpha = Math.min(1, (this.animTimer - 1.0) * 2);
+        const msgY = GAME_HEIGHT * 0.73;
 
-        // Time stat card
         ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-        this._roundRectPath(ctx, GAME_WIDTH / 2 - 105, statRowY - 15, 90, 34, 8);
-        ctx.fill();
-        renderer.drawText(`⏱ ${formatTime(this.timeSurvived)}`, GAME_WIDTH / 2 - 60, statRowY + 2, {
-            font: '700 15px Nunito',
-            color: 'rgba(255,255,255,0.8)',
-        });
-
-        // Flies stat card
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-        this._roundRectPath(ctx, GAME_WIDTH / 2 + 15, statRowY - 15, 90, 34, 8);
-        ctx.fill();
-        renderer.drawText(`🪰 ${this.fliesNeutralized}`, GAME_WIDTH / 2 + 60, statRowY + 2, {
-            font: '700 15px Nunito',
-            color: 'rgba(255,255,255,0.8)',
-        });
-
-        // Fun Message - in a speech bubble style
-        ctx.globalAlpha = Math.min(1, (this.animTimer - 1.2) * 2);
-
-        // Speech bubble bg
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-        const msgW = 280;
-        this._roundRectPath(ctx, GAME_WIDTH / 2 - msgW / 2, 475, msgW, 40, 12);
+        const msgW = 270;
+        this._roundRectPath(ctx, GAME_WIDTH / 2 - msgW / 2, msgY - 14, msgW, 28, 10);
         ctx.fill();
 
-        renderer.drawText(`"${this.funMessage}"`, GAME_WIDTH / 2, 496, {
-            font: 'italic 700 13px Nunito',
+        renderer.drawText(`"${this.funMessage}"`, GAME_WIDTH / 2, msgY, {
+            font: '600 12px Outfit, sans-serif',
             color: 'rgba(255, 230, 180, 0.7)',
             maxWidth: msgW - 20,
         });
 
-        // Buttons
+        // ── Buttons ──
         ctx.globalAlpha = Math.min(1, (this.animTimer - 1.0) * 2);
+
+        // ── Coins Earned ──
+        if (this.coinsEarned > 0) {
+            const coinY = GAME_HEIGHT * 0.78;
+
+            // Coin badge background
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+            this._roundRectPath(ctx, GAME_WIDTH / 2 - 110, coinY - 16, 220, 32, 12);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
+            ctx.lineWidth = 1;
+            this._roundRectPath(ctx, GAME_WIDTH / 2 - 110, coinY - 16, 220, 32, 12);
+            ctx.stroke();
+
+            const coinBounce = 1 + Math.sin(this.animTimer * 3) * 0.03;
+            ctx.save();
+            ctx.translate(GAME_WIDTH / 2, coinY);
+            ctx.scale(coinBounce, coinBounce);
+
+            renderer.drawText(`🪙 +${this.coinsEarned} coins earned!`, 0, 0, {
+                font: '800 15px Nunito',
+                color: '#FFD700',
+                shadowColor: 'rgba(255, 215, 0, 0.5)',
+                shadowBlur: 10,
+            });
+            ctx.restore();
+
+            // Total balance below
+            renderer.drawText(`Total: ${this.totalCoins} coins`, GAME_WIDTH / 2, coinY + 22, {
+                font: '600 11px Nunito',
+                color: 'rgba(255, 215, 0, 0.5)',
+                shadowBlur: 0,
+                shadowOffY: 0,
+            });
+        }
+
         for (const btn of this.buttons) {
             this._drawButton(ctx, btn, renderer);
         }
@@ -485,7 +511,7 @@ export class LeaderboardScreen {
                 color: 'rgba(255,255,255,0.3)',
             });
             renderer.drawText('The baby is waiting... 👶', GAME_WIDTH / 2, 260, {
-                font: 'italic 600 13px Nunito',
+                font: '600 13px Outfit, sans-serif',
                 color: 'rgba(255,255,255,0.2)',
             });
         } else {
@@ -645,7 +671,7 @@ export class SettingsScreen {
 
         // Fun settings message
         renderer.drawText('💡 Pro tip: Sound makes it 10x more fun!', GAME_WIDTH / 2, 510, {
-            font: 'italic 600 12px Nunito',
+            font: '600 12px Outfit, sans-serif',
             color: 'rgba(255, 255, 255, 0.3)',
         });
 
